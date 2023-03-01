@@ -22,22 +22,21 @@ public static class CommandHandlerExtensions
     {
         var keyType = GetKeyType<TPackageInfo>();
 
-        var useCommandMethod = typeof(CommandHandlerExtensions).GetMethod("UseCommand", new Type[] { typeof(TClient) });
+        var useCommandMethod = typeof(CommandHandlerExtensions).GetMethod("UseCommand", new Type[] { typeof(IServiceCollection) });
         useCommandMethod = useCommandMethod.MakeGenericMethod(typeof(TClient), keyType, typeof(TPackageInfo));
 
-        useCommandMethod.Invoke(null, new object[] { services, configurator });
-
-        return services;
-    }
-
-    public static IServiceCollection UseCommand<TClient, TKey, TPackageInfo>(this IServiceCollection services, Action<CommandOptions> configurator)
-        where TPackageInfo : class, IKeyedPackageInfo<TKey>
-        where TClient : class
-    {
-        services.AddSingleton<IPackageHandler<TClient, TKey, TPackageInfo>, CommandHandler<TClient, TKey, TPackageInfo>>();
+        useCommandMethod.Invoke(null, new object[] { services });
 
         return services.Configure(configurator);
     }
+
+    public static IServiceCollection UseCommand<TClient, TKey, TPackageInfo>(this IServiceCollection services)
+        where TPackageInfo : class, IKeyedPackageInfo<TKey>
+        where TClient : class
+    {
+        return services.AddSingleton<IPackageHandler<TClient, TKey, TPackageInfo>, CommandHandler<TClient, TKey, TPackageInfo>>();
+    }
+
 
     //public static IServiceCollection UseCommand<TKey, TPackageInfo>(this ISuperSocketHostBuilder<TPackageInfo> builder, Action<CommandOptions> configurator, IEqualityComparer<TKey> comparer)
     //    where TPackageInfo : class, IKeyedPackageInfo<TKey>
