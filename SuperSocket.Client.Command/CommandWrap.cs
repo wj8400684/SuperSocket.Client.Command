@@ -1,15 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Work;
+namespace SuperSocket.Client.Command;
 
 interface ICommandWrap
 {
     ICommand InnerCommand { get; }
 }
 
-class AsyncCommandWrap<TClient, TPackageInfo, IPackageInterface, TAsyncCommand> : IAsyncCommand<TClient, TPackageInfo>, ICommandWrap
+class AsyncCommandWrap<TPackageInfo, IPackageInterface, TAsyncCommand> : IAsyncCommand<TPackageInfo>, ICommandWrap
     where TPackageInfo : IPackageInterface
-    where TAsyncCommand : IAsyncCommand<TClient, IPackageInterface>
+    where TAsyncCommand : IAsyncCommand<IPackageInterface>
 {
     public TAsyncCommand InnerCommand { get; }
 
@@ -23,9 +23,9 @@ class AsyncCommandWrap<TClient, TPackageInfo, IPackageInterface, TAsyncCommand> 
         InnerCommand = (TAsyncCommand)ActivatorUtilities.CreateInstance(serviceProvider, typeof(TAsyncCommand));
     }
 
-    public async ValueTask ExecuteAsync(TClient client, TPackageInfo package)
+    public async ValueTask ExecuteAsync(TPackageInfo package)
     {
-        await InnerCommand.ExecuteAsync(client, package);
+        await InnerCommand.ExecuteAsync(package);
     }
 
     ICommand ICommandWrap.InnerCommand

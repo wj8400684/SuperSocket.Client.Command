@@ -1,4 +1,4 @@
-﻿namespace Work;
+﻿namespace SuperSocket.Client.Command;
 
 public interface ICommandSource
 {

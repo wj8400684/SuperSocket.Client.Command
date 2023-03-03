@@ -4,18 +4,20 @@ using Microsoft.Extensions.DependencyInjection;
 using SuperSocket.ProtoBase;
 using Microsoft.Extensions.Logging;
 
-namespace Work;
+namespace SuperSocket.Client.Command;
 
-public interface IPackageHandler<TClient, TKey, TReceivePackageInfo> where TClient : class
+public interface IPackageHandler<TReceivePackageInfo>
 {
-    ValueTask HandleAsync(TClient client, TReceivePackageInfo package);
-
-    ValueTask HandleAsync(TClient client, TReceivePackageInfo package, TKey key);
+    ValueTask HandleAsync(TReceivePackageInfo package);
 }
 
-public class CommandHandler<TClient, TKey, TPackageInfo> : CommandHandler<TClient, TKey, TPackageInfo, TPackageInfo>
+public interface IPackageHandler<TKey, TReceivePackageInfo> : IPackageHandler<TReceivePackageInfo>
+{
+    ValueTask HandleAsync(TReceivePackageInfo package, TKey key);
+}
+
+public class CommandHandler<TKey, TPackageInfo> : CommandHandler<TKey, TPackageInfo, TPackageInfo>
     where TPackageInfo : class, IKeyedPackageInfo<TKey>
-    where TClient : class
 {
 
     class TransparentMapper : IPackageMapper<TPackageInfo, TPackageInfo>
@@ -37,10 +39,9 @@ public class CommandHandler<TClient, TKey, TPackageInfo> : CommandHandler<TClien
     }
 }
 
-public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPackageHandler<TClient, TKey, TPackageInfo>
+public class CommandHandler<TKey, TNetPackageInfo, TPackageInfo> : IPackageHandler<TKey, TPackageInfo>
     where TPackageInfo : class, IKeyedPackageInfo<TKey>
     where TNetPackageInfo : class
-    where TClient : class
 {
     private readonly Dictionary<TKey, ICommandSet> _commands;
 
@@ -118,13 +119,11 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
 
     private void RegisterCommandInterfaces(List<CommandTypeInfo> commandInterfaces, List<ICommandSetFactory> commandSetFactories, IServiceProvider serviceProvider, Type packageType, bool wrapRequired = false)
     {
-        var genericTypes = new[] { typeof(TClient), packageType };
-
-        var asyncCommandInterface = typeof(IAsyncCommand<,>).GetTypeInfo().MakeGenericType(genericTypes);
+        var genericTypes = new[] { packageType };
 
         var commandSetFactoryType = typeof(CommandSetFactory);
 
-        var asyncCommandType = new CommandTypeInfo(typeof(IAsyncCommand<,>).GetTypeInfo().MakeGenericType(genericTypes), commandSetFactoryType);
+        var asyncCommandType = new CommandTypeInfo(typeof(IAsyncCommand<>).GetTypeInfo().MakeGenericType(genericTypes), commandSetFactoryType);
 
         commandInterfaces.Add(asyncCommandType);
 
@@ -133,7 +132,7 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
             asyncCommandType.WrapRequired = true;
             asyncCommandType.WrapFactory = (t) =>
             {
-                return typeof(AsyncCommandWrap<,,,>).GetTypeInfo().MakeGenericType(typeof(TClient), typeof(TPackageInfo), packageType, t);
+                return typeof(AsyncCommandWrap<,,>).GetTypeInfo().MakeGenericType(typeof(TPackageInfo), packageType, t);
             };
         }
 
@@ -167,27 +166,27 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
         return serviceProvider.GetService<IPackageMapper<TNetPackageInfo, TPackageInfo>>()!;
     }
 
-    public async ValueTask HandleAsync(TClient client, TPackageInfo package)
+    public async ValueTask HandleAsync(TPackageInfo package)
     {
         if (!_commands.TryGetValue(package.Key, out ICommandSet commandSet))
             return;
 
-        await commandSet.ExecuteAsync(client, package);
+        await commandSet.ExecuteAsync(package);
     }
 
-    public async ValueTask HandleAsync(TClient client, TPackageInfo package, TKey key)
+    public async ValueTask HandleAsync(TPackageInfo package, TKey key)
     {
         if (!_commands.TryGetValue(key, out ICommandSet commandSet))
             return;
 
-        await commandSet.ExecuteAsync(client, package);
+        await commandSet.ExecuteAsync(package);
     }
 
     interface ICommandSet
     {
         TKey Key { get; }
 
-        ValueTask ExecuteAsync(TClient cleint, TPackageInfo package);
+        ValueTask ExecuteAsync(TPackageInfo package);
     }
 
     class CommandTypeInfo
@@ -258,7 +257,7 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
 
     class CommandSet : ICommandSet
     {
-        public IAsyncCommand<TClient, TPackageInfo> AsyncCommand { get; private set; }
+        public IAsyncCommand<TPackageInfo> AsyncCommand { get; private set; }
 
         public CommandMetadata Metadata { get; private set; }
 
@@ -312,7 +311,7 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
 
         protected void SetCommand(ICommand command)
         {
-            AsyncCommand = command as IAsyncCommand<TClient, TPackageInfo>;
+            AsyncCommand = command as IAsyncCommand<TPackageInfo>;
         }
 
         public void Initialize(IServiceProvider serviceProvider, CommandTypeInfo commandTypeInfo, CommandOptions commandOptions)
@@ -347,14 +346,14 @@ public class CommandHandler<TClient, TKey, TNetPackageInfo, TPackageInfo> : IPac
             }
         }
 
-        public async ValueTask ExecuteAsync(TClient client, TPackageInfo package)
+        public async ValueTask ExecuteAsync(TPackageInfo package)
         {
             var asyncCommand = AsyncCommand;
 
             if (asyncCommand == null)
                 return;
 
-            await asyncCommand.ExecuteAsync(client, package);
+            await asyncCommand.ExecuteAsync(package);
         }
 
         public override string ToString()

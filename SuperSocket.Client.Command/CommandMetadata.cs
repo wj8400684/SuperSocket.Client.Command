@@ -1,6 +1,6 @@
 using System;
 
-namespace Work;
+namespace SuperSocket.Client.Command;
 
 public class CommandMetadata
 {

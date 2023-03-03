@@ -1,12 +1,12 @@
 ﻿
-namespace Work;
+namespace SuperSocket.Client.Command;
 
 public interface ICommand
 {
     // empty interface
 }
 
-public interface IAsyncCommand<TClient, TPackageInfo> : ICommand
+public interface IAsyncCommand<TPackageInfo> : ICommand
 {
-    ValueTask ExecuteAsync(TClient client, TPackageInfo package);
+    ValueTask ExecuteAsync(TPackageInfo package);
 }

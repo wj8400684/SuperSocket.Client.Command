@@ -1,5 +1,5 @@
 
-namespace Work;
+namespace SuperSocket.Client.Command;
 
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public class CommandAttribute : Attribute

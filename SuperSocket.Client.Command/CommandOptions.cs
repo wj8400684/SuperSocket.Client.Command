@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Work;
+namespace SuperSocket.Client.Command;
 
 public class CommandOptions : ICommandSource
 {
