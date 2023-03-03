@@ -5,7 +5,7 @@ using System.Net;
 namespace SuperSocket.Client.Command;
 
 public class EasyCommandClient<Tkey, TPackage> : EasyClient<TPackage, TPackage>
-    where TPackage : class, IKeyedPackageInfo<Tkey>
+    where TPackage : class 
 {
     private readonly IServiceProvider _serviceProvider;
     private IPackageHandler<Tkey, TPackage> _packageHandler = null!;
@@ -39,11 +39,11 @@ public class EasyCommandClient<Tkey, TPackage> : EasyClient<TPackage, TPackage>
     {
         try
         {
-            await _packageHandler.HandleAsync(package);
+            await _packageHandler.HandleAsync(this, package);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, $"命令：{package.Key}");
+            Logger.LogError(ex, $"命令：{package}");
         }
     }
 }

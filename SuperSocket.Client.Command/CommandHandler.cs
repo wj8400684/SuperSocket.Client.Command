@@ -8,12 +8,12 @@ namespace SuperSocket.Client.Command;
 
 public interface IPackageHandler<TReceivePackageInfo>
 {
-    ValueTask HandleAsync(TReceivePackageInfo package);
+    ValueTask HandleAsync(object sender, TReceivePackageInfo package);
 }
 
 public interface IPackageHandler<TKey, TReceivePackageInfo> : IPackageHandler<TReceivePackageInfo>
 {
-    ValueTask HandleAsync(TReceivePackageInfo package, TKey key);
+    ValueTask HandleAsync(object sender, TReceivePackageInfo package, TKey key);
 }
 
 public class CommandHandler<TKey, TPackageInfo> : CommandHandler<TKey, TPackageInfo, TPackageInfo>
@@ -166,27 +166,27 @@ public class CommandHandler<TKey, TNetPackageInfo, TPackageInfo> : IPackageHandl
         return serviceProvider.GetService<IPackageMapper<TNetPackageInfo, TPackageInfo>>()!;
     }
 
-    public async ValueTask HandleAsync(TPackageInfo package)
+    public async ValueTask HandleAsync(object sender, TPackageInfo package)
     {
         if (!_commands.TryGetValue(package.Key, out ICommandSet commandSet))
             return;
 
-        await commandSet.ExecuteAsync(package);
+        await commandSet.ExecuteAsync(sender, package);
     }
 
-    public async ValueTask HandleAsync(TPackageInfo package, TKey key)
+    public async ValueTask HandleAsync(object sender, TPackageInfo package, TKey key)
     {
         if (!_commands.TryGetValue(key, out ICommandSet commandSet))
             return;
 
-        await commandSet.ExecuteAsync(package);
+        await commandSet.ExecuteAsync(sender, package);
     }
 
     interface ICommandSet
     {
         TKey Key { get; }
 
-        ValueTask ExecuteAsync(TPackageInfo package);
+        ValueTask ExecuteAsync(object sender, TPackageInfo package);
     }
 
     class CommandTypeInfo
@@ -346,14 +346,14 @@ public class CommandHandler<TKey, TNetPackageInfo, TPackageInfo> : IPackageHandl
             }
         }
 
-        public async ValueTask ExecuteAsync(TPackageInfo package)
+        public async ValueTask ExecuteAsync(object sender, TPackageInfo package)
         {
             var asyncCommand = AsyncCommand;
 
             if (asyncCommand == null)
                 return;
 
-            await asyncCommand.ExecuteAsync(package);
+            await asyncCommand.ExecuteAsync(sender, package);
         }
 
         public override string ToString()

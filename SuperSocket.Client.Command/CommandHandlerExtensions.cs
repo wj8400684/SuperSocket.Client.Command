@@ -44,11 +44,20 @@ public static class CommandHandlerExtensions
     }
 
     /// <summary>
-    /// 使用command客户端
-    /// IEasyClient<TPackageInfo, TPackageInfo>
-    /// IEasyClient<TPackageInfo>
-    /// IPackageHandler<TKey, TPackageInfo>
-    /// IPackageHandler<TPackageInfo>
+    /// 
+    /// </summary>
+    /// <typeparam name="TPackageEncoder"></typeparam>
+    /// <typeparam name="TPackageInfo"></typeparam>
+    /// <param name="services"></param>
+    /// <returns></returns>
+    public static IServiceCollection UsePackageEncoder<TPackageInfo, TPackageEncoder>(this IServiceCollection services)
+         where TPackageEncoder : class, IPackageEncoder<TPackageInfo>
+    {
+        return services.AddSingleton<IPackageEncoder<TPackageInfo>, TPackageEncoder>();
+    }
+
+    /// <summary>
+    /// 
     /// </summary>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TPackageInfo"></typeparam>

@@ -8,5 +8,5 @@ public interface ICommand
 
 public interface IAsyncCommand<TPackageInfo> : ICommand
 {
-    ValueTask ExecuteAsync(TPackageInfo package);
+    ValueTask ExecuteAsync(object sender, TPackageInfo package);
 }

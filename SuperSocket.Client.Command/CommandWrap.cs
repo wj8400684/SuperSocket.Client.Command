@@ -23,9 +23,9 @@ class AsyncCommandWrap<TPackageInfo, IPackageInterface, TAsyncCommand> : IAsyncC
         InnerCommand = (TAsyncCommand)ActivatorUtilities.CreateInstance(serviceProvider, typeof(TAsyncCommand));
     }
 
-    public async ValueTask ExecuteAsync(TPackageInfo package)
+    public async ValueTask ExecuteAsync(object sender, TPackageInfo package)
     {
-        await InnerCommand.ExecuteAsync(package);
+        await InnerCommand.ExecuteAsync(sender, package);
     }
 
     ICommand ICommandWrap.InnerCommand
