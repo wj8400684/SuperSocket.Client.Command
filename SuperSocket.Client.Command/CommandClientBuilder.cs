@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using SuperSocket.ProtoBase;
 
 namespace SuperSocket.Client.Command;
@@ -12,29 +13,29 @@ public interface ICommandClientBuilder<TReceivePackage>
     public ICommandClientBuilder<TReceivePackage> UseCommand(Action<CommandOptions> configurator);
 }
 
-public interface ICommandClientBuilder<TKey, TReceivePackage, TPipelineFilter> : ICommandClientBuilder<TReceivePackage>
+public interface ICommandClientBuilder<TKey, TReceivePackage> : ICommandClientBuilder<TReceivePackage>
     where TReceivePackage : class
-    where TPipelineFilter : class, IPipelineFilter<TReceivePackage>
 {
     public ICommandClientBuilder<TReceivePackage> UseDefaultClient();
+
+    public ICommandClientBuilder<TReceivePackage> UsePipelineFilter<TPipelineFilter>() where TPipelineFilter : class, IPipelineFilter<TReceivePackage>;
 
     public ICommandClientBuilder<TReceivePackage> UseClient<TCommandClient>() where TCommandClient : EasyCommandClient<TKey, TReceivePackage>;
 }
 
-public class CommandClientBuilder<TKey, TReceivePackage, TPipelineFilter> : ICommandClientBuilder<TKey, TReceivePackage, TPipelineFilter>
+public class CommandClientBuilder<TKey, TReceivePackage> : ICommandClientBuilder<TKey, TReceivePackage>
     where TReceivePackage : class, IKeyedPackageInfo<TKey>
-    where TPipelineFilter : class, IPipelineFilter<TReceivePackage>
 {
     private readonly IServiceCollection _serviceContainer;
 
     public CommandClientBuilder(IServiceCollection serviceContainer)
     {
         _serviceContainer = serviceContainer;
-        _serviceContainer.AddSingleton<IPipelineFilter<TReceivePackage>, TPipelineFilter>();
     }
 
     public ICommandClientBuilder<TReceivePackage> UseClient<TCommandClient>() where TCommandClient : EasyCommandClient<TKey, TReceivePackage>
     {
+        _serviceContainer.AddSingleton<TCommandClient>();
         _serviceContainer.AddSingleton<IEasyClient<TReceivePackage, TReceivePackage>, TCommandClient>();
         _serviceContainer.AddSingleton<IEasyClient<TReceivePackage>>(s => s.GetRequiredService<IEasyClient<TReceivePackage, TReceivePackage>>() as TCommandClient);
         return this;
@@ -61,6 +62,12 @@ public class CommandClientBuilder<TKey, TReceivePackage, TPipelineFilter> : ICom
 
         return this;
     }
+
+    public ICommandClientBuilder<TReceivePackage> UsePipelineFilter<TPipelineFilter>() where TPipelineFilter : class, IPipelineFilter<TReceivePackage>
+    {
+        _serviceContainer.AddSingleton<IPipelineFilter<TReceivePackage>, TPipelineFilter>();
+        return this;
+    }
 }
 
 public static class EasyCommandClientBuilderExtensions
@@ -77,29 +84,39 @@ public static class EasyCommandClientBuilderExtensions
         return keyInterface.GetGenericArguments().FirstOrDefault();
     }
 
-    public static ICommandClientBuilder<TReceivePackage> AddCommandClient<TKey, TReceivePackage, TPipelineFilter>(this IServiceCollection serviceDescriptors)
+    public static IServiceCollection AddCommandClient<TKey, TReceivePackage>(this IServiceCollection services, Action<ICommandClientBuilder<TKey, TReceivePackage>> options)
         where TReceivePackage : class, IKeyedPackageInfo<TKey>
-        where TPipelineFilter : class, IPipelineFilter<TReceivePackage>
     {
-        return new CommandClientBuilder<TKey, TReceivePackage, TPipelineFilter>(serviceDescriptors);
+        var builder = new CommandClientBuilder<TKey, TReceivePackage>(services);
+
+        options.Invoke(builder);
+
+        return services;
     }
 
-    public static ICommandClientBuilder<TReceivePackage> AddDefaultCommandClient<TReceivePackage, TPipelineFilter>(this IServiceCollection services)
+    public static IServiceCollection AddDefaultCommandClient<TReceivePackage>(this IServiceCollection services, Action<ICommandClientBuilder<TReceivePackage>> options)
         where TReceivePackage : class
     {
         var keyType = GetKeyType<TReceivePackage>();
 
         //使用 UseEasyCommandClient<TKey, TPackageInfo>(this IServiceCollection services)
         var useCommandMethod = typeof(CommandHandlerExtensions).GetMethod("AddDefaultCommandClient", new Type[] { typeof(IServiceCollection) });
-        useCommandMethod = useCommandMethod.MakeGenericMethod(keyType, typeof(TReceivePackage), typeof(TPipelineFilter));
+        useCommandMethod = useCommandMethod.MakeGenericMethod(keyType, typeof(TReceivePackage) );
 
-        return (ICommandClientBuilder<TReceivePackage>)useCommandMethod.Invoke(null, new object[] { services });
+        var builder = (ICommandClientBuilder<TReceivePackage>)useCommandMethod.Invoke(null, new object[] { services });
+
+        options.Invoke(builder);
+
+        return services;
     }
 
-    public static ICommandClientBuilder<TReceivePackage> AddDefaultCommandClient<TKey, TReceivePackage, TPipelineFilter>(this IServiceCollection serviceDescriptors)
+    public static IServiceCollection AddDefaultCommandClient<TKey, TReceivePackage>(this IServiceCollection services, Action<ICommandClientBuilder<TReceivePackage>> options)
         where TReceivePackage : class, IKeyedPackageInfo<TKey>
-        where TPipelineFilter : class, IPipelineFilter<TReceivePackage>
     {
-        return new CommandClientBuilder<TKey, TReceivePackage, TPipelineFilter>(serviceDescriptors).UseDefaultClient();
+        var builder = new CommandClientBuilder<TKey, TReceivePackage>(services).UseDefaultClient();
+
+        options.Invoke(builder);
+
+        return services;
     }
 }
