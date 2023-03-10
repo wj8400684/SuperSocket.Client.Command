@@ -11,14 +11,14 @@ public interface ICommandClientBuilder<TReceivePackage>
      where TPackageEncoder : class, IPackageEncoder<TReceivePackage>;
 
     public ICommandClientBuilder<TReceivePackage> UseCommand(Action<CommandOptions> configurator);
+
+    public ICommandClientBuilder<TReceivePackage> UsePipelineFilter<TPipelineFilter>() where TPipelineFilter : class, IPipelineFilter<TReceivePackage>;
 }
 
 public interface ICommandClientBuilder<TKey, TReceivePackage> : ICommandClientBuilder<TReceivePackage>
     where TReceivePackage : class
 {
     public ICommandClientBuilder<TReceivePackage> UseDefaultClient();
-
-    public ICommandClientBuilder<TReceivePackage> UsePipelineFilter<TPipelineFilter>() where TPipelineFilter : class, IPipelineFilter<TReceivePackage>;
 
     public ICommandClientBuilder<TReceivePackage> UseClient<TCommandClient>() where TCommandClient : EasyCommandClient<TKey, TReceivePackage>;
 }
@@ -101,7 +101,7 @@ public static class EasyCommandClientBuilderExtensions
 
         //使用 UseEasyCommandClient<TKey, TPackageInfo>(this IServiceCollection services)
         var useCommandMethod = typeof(CommandHandlerExtensions).GetMethod("AddDefaultCommandClient", new Type[] { typeof(IServiceCollection) });
-        useCommandMethod = useCommandMethod.MakeGenericMethod(keyType, typeof(TReceivePackage) );
+        useCommandMethod = useCommandMethod.MakeGenericMethod(keyType, typeof(TReceivePackage));
 
         var builder = (ICommandClientBuilder<TReceivePackage>)useCommandMethod.Invoke(null, new object[] { services });
 
@@ -110,10 +110,12 @@ public static class EasyCommandClientBuilderExtensions
         return services;
     }
 
-    public static IServiceCollection AddDefaultCommandClient<TKey, TReceivePackage>(this IServiceCollection services, Action<ICommandClientBuilder<TReceivePackage>> options)
+    public static IServiceCollection AddDefaultCommandClient<TKey, TReceivePackage>(this IServiceCollection services, Action<ICommandClientBuilder<TKey, TReceivePackage>> options)
         where TReceivePackage : class, IKeyedPackageInfo<TKey>
     {
-        var builder = new CommandClientBuilder<TKey, TReceivePackage>(services).UseDefaultClient();
+        var builder = new CommandClientBuilder<TKey, TReceivePackage>(services);
+
+        builder.UseDefaultClient();
 
         options.Invoke(builder);
 

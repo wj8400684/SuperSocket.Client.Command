@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using SuperSocket.ProtoBase;
-using System.Collections.Concurrent;
 using System.Net;
 
 namespace SuperSocket.Client.Command;
@@ -11,7 +10,7 @@ public class EasyCommandClient<Tkey, TPackage> : EasyClient<TPackage, TPackage>
     private int _regConnectiuonCount;
     private readonly Timer _regConnectionTimer;
     private readonly TimeSpan _regConnectionTime = TimeSpan.FromSeconds(10);
-    private readonly IPackageHandler<Tkey, TPackage> _packageHandler = null!;
+    protected readonly IPackageHandler<Tkey, TPackage> PackageCommandHandler;
 
     public EasyCommandClient(
         IPackageHandler<Tkey, TPackage> packageHandler,
@@ -20,8 +19,8 @@ public class EasyCommandClient<Tkey, TPackage> : EasyClient<TPackage, TPackage>
         ILogger logger)
         : base(pipelineFilter, packageEncoder, logger)
     {
+        PackageCommandHandler = packageHandler;
         PackageHandler += new PackageHandler<TPackage>(OnPackageHandlerAsync);
-        _packageHandler = packageHandler;
         _regConnectionTimer = new Timer(OnRegConnectionCallBack, null, Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -89,7 +88,7 @@ public class EasyCommandClient<Tkey, TPackage> : EasyClient<TPackage, TPackage>
     {
         try
         {
-            await _packageHandler.HandleAsync(this, package);
+            await PackageCommandHandler.HandleAsync(this, package);
         }
         catch (Exception ex)
         {
